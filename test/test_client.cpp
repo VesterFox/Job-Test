@@ -23,11 +23,11 @@ int SendRequest()
     serverAddress.sin_port = htons(5555);
     serverAddress.sin_addr.s_addr = INADDR_ANY;
 
-    vector<uint8_t> message = {0xCF, 0x01};
+    uint8_t message[] = {0xCF, 0x01};
 
     //Отправка сообщения
-    if (sendto(clientSocket, message.data(), message.size(), 0, 
-        (struct sockaddr*)&serverAddress, sizeof(serverAddress)) != message.size()) 
+    if (sendto(clientSocket, message, sizeof(message), 0, 
+        (struct sockaddr*)&serverAddress, sizeof(serverAddress)) != sizeof(message)) 
     {
         close(clientSocket);
         handleError("Ошибка отправки сообщения.");
@@ -37,19 +37,17 @@ int SendRequest()
         cout << "Тестовое сообщение отправлено." << endl;
     }
 
-    vector<uint8_t> response(1024);
+    uint8_t response [3];
     sockaddr_in fromAddress{};
     socklen_t fromAddrLen = sizeof(fromAddress);
 
-    ssize_t bytesRead = recvfrom(clientSocket, response.data(), response.size(), 
+    ssize_t bytesRead = recvfrom(clientSocket, response, sizeof(response), 
         0, (struct sockaddr*)&fromAddress, &fromAddrLen);
     if(bytesRead < 0) 
     {
         close(clientSocket);
         handleError("Ошибка получения ответа");
     }
-
-    response.resize(bytesRead);
 
     // Вывод сообщения ответа
     cout << "Получен ответ: ";

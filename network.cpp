@@ -34,12 +34,12 @@ int main(int argc, char* argv[])
     
     while(true)
     {
-        vector<uint8_t> buffer(1024);
+        uint8_t buffer [2];
         sockaddr_in clientAddress{};
         socklen_t clientAddrLen = sizeof(clientAddress);
 
         //Получение сообщения
-        ssize_t bytesRead = recvfrom(serverSocket, buffer.data(), buffer.size(), 0,
+        ssize_t bytesRead = recvfrom(serverSocket, buffer, sizeof(buffer), 0,
             (struct sockaddr*)&clientAddress, &clientAddrLen);
         
         if(bytesRead < 0)
@@ -48,13 +48,19 @@ int main(int argc, char* argv[])
             continue;
         }
 
-        buffer.resize(bytesRead);
+        // Вывод сообщения ответа
+        cout << "Получено сообщение: ";
+        for(const auto& byte : buffer) 
+        {
+            printf("%02X ", byte);
+        }
+        cout << endl;
 
         // Подготовка ответа
-        vector<uint8_t> response = {0xFC, 0x01};
+        uint8_t response[3] = {0xFC, 0x01};
 
         // Проверка корректности ID
-        if(buffer[0] != 0xCF || buffer[1] != 0x01)
+        if(bytesRead < 2 || buffer[0] != 0xCF || buffer[1] != 0x01)
         {
             handleError("Получено сообщение с некорректным ID.", false);
             continue;
@@ -65,12 +71,10 @@ int main(int argc, char* argv[])
             // и его преобразование для отправки
             State state = GetState();
 
-            if(state.general == "Failed") response.push_back(0x01);
+            response[2] = state.general == "Failed" ? 0x01 : 0x02;
 
-            if(state.general == "Normal") response.push_back(0x02);
-
-            if(sendto(serverSocket, response.data(), response.size(), 0,
-                (struct sockaddr*)&clientAddress, clientAddrLen) != response.size())
+            if(sendto(serverSocket, response, sizeof(response), 0,
+                (struct sockaddr*)&clientAddress, clientAddrLen) != sizeof(response))
                 handleError("Ошибка отправки ответа.", false);
         }
 
